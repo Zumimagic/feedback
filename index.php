@@ -5,49 +5,57 @@ $nameErr = $emailErr = $bodyErr = '';
 
 // Form submit
 if (isset($_POST['submit'])) {
-  $name = $_POST['name'];
-  $email = $_POST['email'];
-  $body = $_POST['body'];
+  $name = trim($_POST['name']);
+  $email = trim($_POST['email']);
+  $body = trim($_POST['body']);
   // Validate name
-  if (empty($_POST['name'])) {
+  if (empty($name)) {
     $nameErr = 'Name is required';
   } else {
-    $name = $_POST['name'];
     // check if name only contains letters and whitespace	
     if (!preg_match("/^[a-zàèòùšđčćžA-ZŠĐČĆŽ\s]*$/", $name)) {
-    $name_error = "Name and surname can only contain letters and a space!";
+      $nameErr = "Name and surname can only contain letters and a space!";
     }
   }
   // Validate email
-  if (empty($_POST['email'])) {
+  if (empty($email)) {
     $emailErr = 'Email is required';
   } else {
-    $email = $_POST['email'];
     // check if e-mail address is well-formed
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
       $emailErr = 'The e-mail address is not valid!';
     }
   }
   // Validate body
-  if (empty($_POST['body'])) {
+  if (empty($body)) {
     $bodyErr = 'Feedback is required';
   } else {
-    // check if name only contains letters and whitespace
-    if (!preg_match("/^[a-zàèòùšđčćžA-ZŠĐČĆŽ0-9 ,.!?\'\"]*$/", $body)) {
+    // check if feedback contains only allowed characters
+    if (!preg_match("/^[a-zàèòùšđčćžA-ZŠĐČĆŽ0-9 ,.!?\'\"\-\n\r]*$/", $body)) {
       $bodyErr = "Feedback content cannot be special characters!";
     }
   }
   if (empty($nameErr) && empty($emailErr) && empty($bodyErr)) {
-    // add to database
-    $sql = "INSERT INTO feedback (name, email, body) VALUES ('$name', '$email', '$body')";
-    if (mysqli_query($conn, $sql)) {
-      // success
-      echo "<script>
+    // add to database using prepared statement
+    $sql = "INSERT INTO feedback (name, email, body) VALUES (?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    
+    if ($stmt) {
+      $stmt->bind_param("sss", $name, $email, $body);
+      
+      if ($stmt->execute()) {
+        // success
+        $stmt->close();
+        echo "<script>
 window.location = \"https://feedback.mirnesglamocic.com/feedback.html\"
 </script>";
+      } else {
+        // error
+        $stmt->close();
+        echo 'Error: Unable to submit feedback. Please try again.';
+      }
     } else {
-      // error
-      echo 'Error: ' . mysqli_error($conn);
+      echo 'Error: Unable to prepare statement. Please try again.';
     }
   }
 }
@@ -63,7 +71,7 @@ window.location = \"https://feedback.mirnesglamocic.com/feedback.html\"
       <div class="mb-3">
         <label for="name" class="form-label">Name</label>
         <input type="text" class="form-control <?php echo $nameErr ?
-          'is-invalid': null; ?>" id="name" name="name" placeholder="Enter your name" value="<?php echo $name; ?>">
+          'is-invalid': null; ?>" id="name" name="name" placeholder="Enter your name" value="<?php echo htmlspecialchars($name); ?>">
         <div id="validationServerFeedback" class="invalid-feedback">
           <?php echo $nameErr; ?>
         </div>
@@ -71,7 +79,7 @@ window.location = \"https://feedback.mirnesglamocic.com/feedback.html\"
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
         <input type="email" class="form-control <?php echo $emailErr ?
-          'is-invalid': null; ?>" id="email" name="email" placeholder="Enter your email" value="<?php echo $email; ?>">
+          'is-invalid': null; ?>" id="email" name="email" placeholder="Enter your email" value="<?php echo htmlspecialchars($email); ?>">
         <div class="invalid-feedback">
         <?php echo $emailErr; ?>
         </div>
@@ -79,7 +87,7 @@ window.location = \"https://feedback.mirnesglamocic.com/feedback.html\"
       <div class="mb-3">
         <label for="body" class="form-label">Feedback</label>
         <textarea class="form-control <?php echo $bodyErr ?
-          'is-invalid':null; ?>" id="body" name="body" placeholder="Enter your feedback"><?php echo $body; ?></textarea>
+          'is-invalid':null; ?>" id="body" name="body" placeholder="Enter your feedback"><?php echo htmlspecialchars($body); ?></textarea>
           <div class="invalid-feedback">
           <?php echo $bodyErr; ?>
         </div>

@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8008:80"
+    environment:
+      DB_HOST: db
+      DB_USER: feedback
+      DB_PASS: feedback
+      DB_NAME: feedback
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: feedback
+      MYSQL_USER: feedback
+      MYSQL_PASSWORD: feedback
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./feedback.sql:/docker-entrypoint-initdb.d/feedback.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  db_data:
